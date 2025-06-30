@@ -2,13 +2,12 @@ name: Update Playlist Every Hour
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Every hour
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 jobs:
   update-playlist:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -24,10 +23,10 @@ jobs:
       - name: Run update script
         run: python update_script.py
 
-      - name: Commit and push if file changed
+      - name: Commit and push changes
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add artl.m3u || echo "No playlist file to add"
-          git commit -m "Auto update artl.m3u" || echo "No changes to commit"
+          git add artl.m3u || echo "Nothing to add"
+          git commit -m "Auto update artl.m3u" || echo "No changes"
           git push || echo "Nothing to push"

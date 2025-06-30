@@ -17,7 +17,7 @@ if not selected_channels:
     print("❌ No CHANNELS defined in .env")
     exit()
 
-print(f"📥 Fetching playlist from: {SOURCE_URL}")
+print(f"📅 Fetching playlist from: {SOURCE_URL}")
 try:
     response = requests.get(SOURCE_URL)
     response.raise_for_status()
@@ -36,7 +36,7 @@ while i < len(lines) - 5:
        lines[i+3].startswith("#EXTHTTP:") and \
        lines[i+4].startswith("#EXTVLCOPT:") and \
        lines[i+5].startswith("http"):
-        
+
         extinf = lines[i+2]
         if any(ch in extinf.lower() for ch in selected_channels):
             block = "\n".join(lines[i:i+6])
@@ -47,6 +47,10 @@ while i < len(lines) - 5:
 
 # === Write updated playlist ===
 output_file = "artl.m3u"
+
+if os.path.exists(output_file):
+    os.remove(output_file)
+
 if full_blocks:
     print(f"✅ Found {len(full_blocks)} matching channel(s)")
     with open(output_file, "w", encoding="utf-8") as f:
@@ -60,4 +64,10 @@ else:
 
 # === Set write permissions just in case
 os.chmod(output_file, 0o666)
+
 print(f"✅ '{output_file}' written successfully.")
+
+# === Optional: print first few lines
+with open(output_file, 'r', encoding='utf-8') as f:
+    preview = ''.join(f.readlines()[:12])
+    print("\n📄 File preview:\n" + preview)

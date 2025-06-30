@@ -3,55 +3,58 @@ import os
 from dotenv import load_dotenv
 import requests
 
-# === LOAD ENV ===
+# === Load .env file ===
 load_dotenv()
 SOURCE_URL = os.getenv("SOURCE_URL")
 CHANNELS = os.getenv("CHANNELS", "")
 
 if not SOURCE_URL:
-    print("❌ SOURCE_URL not set in .env")
+    print("❌ SOURCE_URL is missing in .env")
     exit()
 
-selected_channels = [c.strip().lower() for c in CHANNELS.split(",") if c.strip()]
+selected_channels = [ch.strip().lower() for ch in CHANNELS.split(",") if ch.strip()]
+if not selected_channels:
+    print("❌ No CHANNELS defined in .env")
+    exit()
 
-# === FETCH FRESH DATA ===
-print(f"📥 Fetching from {SOURCE_URL}")
+print(f"📥 Fetching fresh playlist from: {SOURCE_URL}")
 try:
-    r = requests.get(SOURCE_URL)
-    r.raise_for_status()
+    response = requests.get(SOURCE_URL)
+    response.raise_for_status()
+    fresh_lines = response.text.splitlines()
 except Exception as e:
-    print(f"❌ Failed to fetch source: {e}")
+    print(f"❌ Error fetching playlist: {e}")
     exit()
 
-lines = r.text.splitlines()
+# === Extract selected channel blocks ===
 fresh_blocks = []
-
-# === EXTRACT ONLY SELECTED CHANNEL BLOCKS ===
 i = 0
-while i < len(lines) - 2:
-    if lines[i].startswith("#EXTINF:") and any(ch.lower() in lines[i].lower() for ch in selected_channels):
-        if lines[i+1].startswith("#EXTHTTP:") and lines[i+2].startswith("http"):
-            fresh_blocks.append((lines[i], lines[i+1], lines[i+2]))
+while i < len(fresh_lines) - 2:
+    line = fresh_lines[i]
+    if line.startswith("#EXTINF:") and any(ch in line.lower() for ch in selected_channels):
+        if fresh_lines[i+1].startswith("#EXTHTTP:") and fresh_lines[i+2].startswith("http"):
+            fresh_blocks.append((line, fresh_lines[i+1], fresh_lines[i+2]))
             i += 3
             continue
     i += 1
 
-if not fresh_blocks:
-    print("❌ No matching channels found.")
-    exit()
-
-print(f"✅ Found {len(fresh_blocks)} selected channels.")
-
-# === BUILD UPDATED PLAYLIST ===
+# === Write output ===
+output_file = "artl.m3u"
 header = "#EXTM3U\n# Updated by GitHub Action\n\n"
-new_content = header
-for block in fresh_blocks:
-    new_content += block[0] + "\n"  # EXTINF
-    new_content += block[1] + "\n"  # EXTHTTP
-    new_content += block[2] + "\n"  # URL
 
-# === WRITE TO FILE ===
-with open("artl.m3u", "w", encoding="utf-8") as f:
-    f.write(new_content)
+if fresh_blocks:
+    print(f"✅ Found {len(fresh_blocks)} matching channel(s)")
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write(header)
+        for block in fresh_blocks:
+            f.write(block[0] + "\n")
+            f.write(block[1] + "\n")
+            f.write(block[2] + "\n")
+else:
+    print("⚠️ No matching channels found, creating empty playlist.")
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write("#EXTM3U\n# No matching channels found\n")
 
-print("✅ artl.m3u written with selected channels only.")
+# === Ensure file is writable ===
+os.chmod(output_file, 0o666)
+print(f"✅ '{output_file}' written successfully.")

@@ -1,0 +1,32 @@
+name: Update artl.m3u
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Every hour
+  workflow_dispatch:
+
+jobs:
+  update-playlist:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: pip install python-dotenv requests
+
+      - name: Load .env and Run Update Script
+        run: python update_script.py
+
+      - name: Commit & Push Changes
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add artl.m3u
+          git commit -m "Auto update artl.m3u" || echo "No changes to commit"
+          git push

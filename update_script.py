@@ -72,7 +72,7 @@ while i < len(lines) - 5:
     i += 1
 
 # === Output file
-output_file = "artl.m3u"
+output_file = "Airtel.m3u"
 if os.path.exists(output_file):
     os.remove(output_file)
 

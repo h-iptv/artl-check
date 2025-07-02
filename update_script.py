@@ -4,23 +4,29 @@ import json
 import requests
 from dotenv import load_dotenv
 
-# === Load env variables ===
+# === Load env variables from .env ===
 load_dotenv()
-SOURCE_URL = os.getenv("SOURCE_URL")
+
+# === Load SOURCE_URL from environment (e.g., GitHub Secrets) ===
+SOURCE_URL = os.environ.get("SOURCE_URL")
 CHANNEL_GROUPS_RAW = os.getenv("CHANNEL_GROUPS")
 
-if not SOURCE_URL or not CHANNEL_GROUPS_RAW:
-    print("❌ SOURCE_URL or CHANNEL_GROUPS not set in .env")
+if not SOURCE_URL:
+    print("❌ SOURCE_URL is not set in GitHub Secrets or environment.")
     exit()
 
-# Convert JSON-like string to dict
+if not CHANNEL_GROUPS_RAW:
+    print("❌ CHANNEL_GROUPS is not set in .env")
+    exit()
+
+# Parse CHANNEL_GROUPS JSON string
 try:
     channel_groups = json.loads(CHANNEL_GROUPS_RAW)
 except json.JSONDecodeError as e:
     print(f"❌ Invalid CHANNEL_GROUPS format: {e}")
     exit()
 
-# Create flat list of all allowed channels
+# Build lookup for allowed channels
 allowed_channels = {}
 for group, channels in channel_groups.items():
     for name in channels:
@@ -29,7 +35,7 @@ for group, channels in channel_groups.items():
 # === Fetch playlist ===
 print(f"📥 Fetching playlist from: {SOURCE_URL}")
 try:
-    response = requests.get(SOURCE_URL)
+    response = requests.get(SOURCE_URL, timeout=20)
     response.raise_for_status()
     lines = response.text.splitlines()
 except Exception as e:
@@ -48,7 +54,6 @@ while i < len(lines) - 5:
        lines[i+5].startswith("http"):
 
         extinf = lines[i+2]
-        # Extract channel name
         try:
             channel_name = extinf.split(",")[-1].strip()
             group = allowed_channels.get(channel_name.lower())
@@ -56,7 +61,7 @@ while i < len(lines) - 5:
             group = None
 
         if group:
-            # Inject new group-title
+            # Inject updated group-title into EXTINF
             updated_extinf = re.sub(r'group-title=".*?"', f'group-title="{group}"', extinf)
             block = "\n".join([
                 lines[i],
@@ -71,20 +76,19 @@ while i < len(lines) - 5:
             continue
     i += 1
 
-# === Output file
+# === Write output
 output_file = "Airtel.m3u"
 if os.path.exists(output_file):
     os.remove(output_file)
 
-if full_blocks:
-    print(f"✅ Found {len(full_blocks)} categorized channels.")
-    with open(output_file, "w", encoding="utf-8") as f:
+with open(output_file, "w", encoding="utf-8") as f:
+    if full_blocks:
+        print(f"✅ Found {len(full_blocks)} categorized channels.")
         f.write("#EXTM3U\n# Updated by GitHub Action\n\n")
         for block in full_blocks:
             f.write(block + "\n")
-else:
-    print("⚠️ No matching channels found.")
-    with open(output_file, "w", encoding="utf-8") as f:
+    else:
+        print("⚠️ No matching channels found.")
         f.write("#EXTM3U\n# No matching channels found\n")
 
 os.chmod(output_file, 0o666)

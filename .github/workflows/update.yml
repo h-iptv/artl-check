@@ -10,9 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write  # 🔑 REQUIRED to allow push
-     env:
-      SOURCE_URL: ${{ secrets.SOURCE_URL }}
+      contents: write
+
+    env:
+      SOURCE_URL: ${{ secrets.SOURCE_URL }}  # Inject secret
 
     steps:
       - name: Checkout Repository

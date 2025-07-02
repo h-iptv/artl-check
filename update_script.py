@@ -84,7 +84,7 @@ if os.path.exists(output_file):
 with open(output_file, "w", encoding="utf-8") as f:
     if full_blocks:
         print(f"✅ Found {len(full_blocks)} categorized channels.")
-        f.write("#EXTM3U\n# Updated by Himanshu\n\n")
+        f.write("#EXTM3U\n# Updated By Himanshu\n\n")
         for block in full_blocks:
             f.write(block + "\n")
     else:
